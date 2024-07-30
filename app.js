@@ -1,6 +1,8 @@
-if(process.env.NODE_ENV !== "production") {
-    require('dotenv').config();
-}
+//if(process.env.NODE_ENV !== "production") {
+//    require('dotenv').config();  
+//}
+require('dotenv').config();
+
 
 const express = require('express');
 const path = require('path');
@@ -19,6 +21,7 @@ const mongoSanitize = require('express-mongo-sanitize');
 const userRoutes = require('./routes/users');
 const campgroundRoutes = require('./routes/campgrounds');
 const reviewRoutes = require('./routes/reviews');
+const { name } = require('ejs');
 
 mongoose.connect('mongodb://localhost:27017/yelp-camp', {
     useNewUrlParser: true,
@@ -45,11 +48,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(mongoSanitize());
 
 const sessionConfig = {
+    name: 'blah',
     secret: 'thisshouldbeabettersecret!',
     resave: false,
     saveUninitialized: true,
     cookie: {
         httpOnly: true,
+        // secure: true,
         expires: Date.now() + 1000 * 60 * 60 * 24 * 7,
         maxAge: 1000 * 60 * 60 * 24 * 7
     }
