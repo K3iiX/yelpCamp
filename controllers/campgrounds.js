@@ -1,18 +1,26 @@
 const Campground = require('../models/campground');
 const cloudinary = require('cloudinary').v2;
 
+const maptilerClient = require("@maptiler/client");
+maptilerClient.config.apiKey = process.env.MAPTILER_API_KEY;
+
+//CAMPGROUNDS INDEX
 module.exports.index = async (req, res) => {
     const campgrounds = await Campground.find({});
     res.render('campgrounds/index', { campgrounds })
 }
 
+//NEW CAMPGROUND
 module.exports.renderNewForm = (req, res) => {
     res.render('campgrounds/new');
 }
 
-module.exports.createCampground = async (req, res, next) => {    
+//CAMPGROUND POST NEW SITE
+module.exports.createCampground = async (req, res, next) => {
+    const geoData = await maptilerClient.geocoding.forward(req.body.campground.location, { limit: 1 });
     const campground = new Campground(req.body.campground);
-    campground.images = req.files.map(f => ({url: f.path, filename: f.filename}));
+    campground.geometry = geoData.features[0].geometry;
+    campground.images = req.files.map(f => ({ url: f.path, filename: f.filename }));
     campground.author = req.user._id;
     await campground.save();
     console.log(campground);
@@ -20,6 +28,7 @@ module.exports.createCampground = async (req, res, next) => {
     res.redirect(`/campgrounds/${campground._id}`)
 }
 
+//SHOW CAMPGROUND AND POPULATE REVIEWS
 module.exports.showCampground = async (req, res,) => {
     const campground = await Campground.findById(req.params.id).populate({
         path: 'reviews',
@@ -34,6 +43,7 @@ module.exports.showCampground = async (req, res,) => {
     res.render('campgrounds/show', { campground });
 }
 
+//GET EDIT
 module.exports.renderEditForm = async (req, res) => {
     const { id } = req.params;
     const campground = await Campground.findById(id)
@@ -44,10 +54,13 @@ module.exports.renderEditForm = async (req, res) => {
     res.render('campgrounds/edit', { campground });
 }
 
+//PUT EDIT
 module.exports.updateCampground = async (req, res) => {
     const { id } = req.params;
     console.log(req.body);
     const campground = await Campground.findByIdAndUpdate(id, { ...req.body.campground });
+    const geoData = await maptilerClient.geocoding.forward(req.body.campground.location, { limit: 1 });
+    campground.geometry = geoData.features[0].geometry;
     const imgs = req.files.map(f => ({url: f.path, filename: f.filename}));
     campground.images.push (...imgs);
     await campground.save()
@@ -62,6 +75,7 @@ module.exports.updateCampground = async (req, res) => {
     res.redirect(`/campgrounds/${campground._id}`)
 }
 
+//DELETE CAMPGROUND
 module.exports.deleteCampground = async (req, res) => {
     const { id } = req.params;
     await Campground.findByIdAndDelete(id);
